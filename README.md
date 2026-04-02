@@ -17,18 +17,43 @@ open /Applications/ClipStash.app
 
 ### Architecture
 
-ClipStash is a single-file macOS app (`ClipStash.swift`) built with AppKit — no SwiftUI, no Xcode project, no storyboards. It compiles directly with `swiftc`.
+ClipStash is a multi-file macOS app built with AppKit — no SwiftUI, no Xcode project, no storyboards. It compiles directly with `swiftc` from 14 source files following SOLID principles.
 
 ```
-ClipStash.swift          # Entire application (single file)
-├── ClipItem             # Data model (Codable struct)
-├── ClipboardManager     # Singleton — polls pasteboard, persists history
-├── OverlayPanel         # NSPanel subclass — floating Spotlight-style window
-├── ClipRowView          # NSView subclass — individual clipboard entry row
-├── OverlayViewController # Main UI — search, list, keyboard navigation
-├── AppDelegate          # Menu bar icon, hotkey registration, panel toggle
-└── Entry Point          # NSApplication.shared bootstrap
+Sources/
+├── App/                          # Composition root
+│   ├── main.swift                # Entry point — bootstraps NSApplication
+│   └── AppDelegate.swift         # Wires services together, manages overlay lifecycle
+├── Models/                       # Pure data — no framework imports
+│   ├── ClipItem.swift            # Clipboard entry (Codable, Identifiable)
+│   └── HotkeyBinding.swift       # Shortcut key + modifier pair
+├── Services/                     # Business logic layer
+│   ├── ClipboardManager.swift    # Monitors pasteboard, manages history
+│   ├── JSONClipboardStorage.swift # Concrete persistence (implements ClipboardStorable)
+│   ├── HotkeyService.swift       # Global hotkey registration + preference persistence
+│   └── KeyboardSimulator.swift   # CGEvent-based Cmd+V simulation
+├── Views/                        # UI layer — AppKit views
+│   ├── OverlayPanel.swift        # Floating NSPanel (Spotlight-style)
+│   ├── OverlayViewController.swift # Search + list + keyboard navigation
+│   ├── ClipRowView.swift         # Individual clipboard row
+│   └── MenuBarIcon.swift         # Programmatic "CP" template image
+├── Config/                       # Constants — single source of truth
+│   ├── Layout.swift              # Dimensions (panel size, padding, row metrics)
+│   ├── Theme.swift               # Colors and fonts
+│   └── Constants.swift           # Behavior settings, animation timing
+└── Protocols/                    # Abstractions (Dependency Inversion)
+    ├── ClipboardStorable.swift   # Storage backend interface
+    ├── ClipboardMonitoring.swift # Clipboard manager interface
+    └── OverlayPresenting.swift   # Panel + VC delegate protocols
 ```
+
+### Design Principles
+
+- **Single Responsibility** — each file has one job (e.g., `KeyboardSimulator` only simulates keypresses)
+- **Open/Closed** — add new hotkey presets or storage backends without modifying existing code
+- **Liskov Substitution** — `ClipboardManager` can be replaced with any `ClipboardMonitoring` conformant
+- **Interface Segregation** — small, focused protocols (`ClipboardStorable` vs `ClipboardMonitoring`)
+- **Dependency Inversion** — `ClipboardManager` depends on `ClipboardStorable` abstraction, not `JSONClipboardStorage` directly; `OverlayViewController` depends on `ClipboardMonitoring`, not the concrete manager
 
 ### Clipboard Monitoring
 
@@ -91,7 +116,7 @@ macOS will ask for:
 
 ```
 ClipStash/
-├── ClipStash.swift      # Complete application source
+├── Sources/             # 14 Swift source files (see Architecture above)
 ├── Info.plist           # macOS app bundle configuration
 ├── build.sh             # Build script (compiles + packages .app bundle)
 ├── AppIcon.icns         # Application icon

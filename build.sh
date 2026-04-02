@@ -12,12 +12,20 @@ APP_BUNDLE="${BUILD_DIR}/${APP_NAME}.app"
 CONTENTS="${APP_BUNDLE}/Contents"
 MACOS="${CONTENTS}/MacOS"
 RESOURCES="${CONTENTS}/Resources"
+SRC_DIR="$(pwd)/Sources"
 
 echo ""
 echo "  ┌─────────────────────────────────┐"
 echo "  │   Building ClipStash v1.0       │"
 echo "  └─────────────────────────────────┘"
 echo ""
+
+# Collect all Swift source files (handle spaces in paths)
+SOURCES=()
+while IFS= read -r -d '' file; do
+    SOURCES+=("$file")
+done < <(find "${SRC_DIR}" -name "*.swift" -print0 | sort -z)
+echo "  ⟐  Found ${#SOURCES[@]} source files"
 
 # Clean previous build
 rm -rf "${BUILD_DIR}"
@@ -31,7 +39,7 @@ swiftc \
     -framework Carbon \
     -target arm64-apple-macosx13.0 \
     -O \
-    ClipStash.swift
+    "${SOURCES[@]}"
 
 echo "  ⟐  Packaging app bundle..."
 
@@ -73,7 +81,7 @@ if [ "$1" = "--universal" ]; then
         -framework Carbon \
         -target x86_64-apple-macosx13.0 \
         -O \
-        ClipStash.swift
+        "${SOURCES[@]}"
 
     echo "  ⟐  Creating universal binary..."
     lipo -create \
