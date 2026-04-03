@@ -10,6 +10,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, OverlayPanelDelegate, 
     private var overlayVC: OverlayViewController!
     private var hotkeyService: HotkeyService!
     private var isShowing = false
+    private var welcomePanel: OverlayPanel?
 
     // MARK: - App Lifecycle
 
@@ -19,6 +20,50 @@ final class AppDelegate: NSObject, NSApplicationDelegate, OverlayPanelDelegate, 
         setupOverlay()
         setupHotkey()
         ClipboardManager.shared.startMonitoring()
+        KeystrokeMonitor.shared.startMonitoring()
+
+        // Show welcome if permissions not granted; skip straight to app if they are
+        let hasPermissions = AXIsProcessTrusted()
+        if !hasPermissions {
+            showWelcome()
+        }
+    }
+
+    // MARK: - Welcome
+
+    private func showWelcome() {
+        let wp = OverlayPanel()
+        self.welcomePanel = wp
+
+        let welcomeVC = WelcomeViewController()
+        welcomeVC.onComplete = { [weak self] in
+            guard let self = self else { return }
+            NSAnimationContext.runAnimationGroup({ ctx in
+                ctx.duration = 0.2
+                self.welcomePanel?.animator().alphaValue = 0
+            }, completionHandler: {
+                self.welcomePanel?.orderOut(nil)
+                self.welcomePanel = nil
+            })
+        }
+        wp.contentViewController = welcomeVC
+
+        if let screen = NSScreen.main {
+            let frame = screen.visibleFrame
+            wp.setFrameOrigin(NSPoint(
+                x: frame.midX - (Layout.panelWidth / 2),
+                y: frame.midY - (Layout.panelHeight / 2)
+            ))
+        }
+
+        wp.alphaValue = 0
+        wp.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        NSAnimationContext.runAnimationGroup { ctx in
+            ctx.duration = 0.3
+            ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            wp.animator().alphaValue = 1
+        }
     }
 
     // MARK: - Menu Bar
@@ -91,7 +136,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, OverlayPanelDelegate, 
     private func showOverlay() {
         guard !isShowing else { return }
         isShowing = true
-
+        
+        SoundPlayer.shared.playOpenSound()
         centerPanel()
         panel.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)

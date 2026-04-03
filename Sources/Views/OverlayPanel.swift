@@ -1,9 +1,6 @@
 import Cocoa
 
-/// Spotlight-style floating panel.
-///
-/// Configured as a non-activating, transparent-titlebar panel that
-/// floats above all windows and dismisses on focus loss.
+/// Spotlight-style floating panel with glassmorphism.
 final class OverlayPanel: NSPanel {
     weak var overlayDelegate: OverlayPanelDelegate?
 

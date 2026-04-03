@@ -1,11 +1,7 @@
 import Cocoa
 
-/// A single row in the clipboard history list.
-///
-/// Handles its own hover tracking, drawing, and context menu.
-/// Communicates user intent via closures (onSelect, onPin, onDelete)
-/// — it does not know about ClipboardManager or any other service.
-final class ClipRowView: NSView {
+/// A card in the grid view — glassmorphic rounded rectangle with content preview.
+final class ClipGridItemView: NSView {
     let item: ClipItem
     var onSelect: (() -> Void)?
     var onPin: (() -> Void)?
@@ -21,9 +17,9 @@ final class ClipRowView: NSView {
     private var trackingArea: NSTrackingArea?
 
     private static let timeFormatter: RelativeDateTimeFormatter = {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .abbreviated
-        return formatter
+        let f = RelativeDateTimeFormatter()
+        f.unitsStyle = .abbreviated
+        return f
     }()
 
     init(item: ClipItem) {
@@ -34,64 +30,52 @@ final class ClipRowView: NSView {
 
     required init?(coder: NSCoder) { fatalError() }
 
-    // MARK: - Layout
-
     private func buildLayout() {
         wantsLayer = true
-        layer?.cornerRadius = Layout.rowCornerRadius
-        layer?.borderWidth = 0.5
+        layer?.cornerRadius = 10
+        layer?.borderWidth = 1
         layer?.borderColor = Theme.cardBorder.cgColor
-        configureLabels()
-        addSubview(contentLabel)
-        addSubview(timeLabel)
-        addSubview(pinLabel)
-        activateConstraints()
-    }
 
-    private func configureLabels() {
         contentLabel.stringValue = item.preview
-        contentLabel.font = Theme.contentFont
+        contentLabel.font = Theme.gridTitleFont
         contentLabel.textColor = Theme.textPrimary
-        contentLabel.maximumNumberOfLines = 2
+        contentLabel.maximumNumberOfLines = 3
         contentLabel.lineBreakMode = .byTruncatingTail
         contentLabel.translatesAutoresizingMaskIntoConstraints = false
 
         timeLabel.stringValue = Self.timeFormatter.localizedString(for: item.timestamp, relativeTo: Date())
-        timeLabel.font = Theme.timestampFont
+        timeLabel.font = Theme.gridTimeFont
         timeLabel.textColor = Theme.textSecondary
         timeLabel.translatesAutoresizingMaskIntoConstraints = false
 
         pinLabel.stringValue = item.pinned ? "pinned" : ""
+        pinLabel.font = NSFont.systemFont(ofSize: 9)
         pinLabel.textColor = Theme.accent
-        pinLabel.font = Theme.timestampFont
         pinLabel.translatesAutoresizingMaskIntoConstraints = false
-    }
 
-    private func activateConstraints() {
-        let pad = Layout.horizontalPadding
+        addSubview(contentLabel)
+        addSubview(timeLabel)
+        addSubview(pinLabel)
+
         NSLayoutConstraint.activate([
-            contentLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: pad),
-            contentLabel.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -pad),
             contentLabel.topAnchor.constraint(equalTo: topAnchor, constant: 10),
+            contentLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 10),
+            contentLabel.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -10),
 
-            pinLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: pad),
+            pinLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 10),
             pinLabel.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -8),
 
-            timeLabel.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -pad),
+            timeLabel.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -10),
             timeLabel.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -8),
         ])
     }
 
-    // MARK: - Mouse Tracking
+    // MARK: - Mouse
 
     override func updateTrackingAreas() {
         super.updateTrackingAreas()
         if let existing = trackingArea { removeTrackingArea(existing) }
-        trackingArea = NSTrackingArea(
-            rect: bounds,
-            options: [.mouseEnteredAndExited, .activeAlways],
-            owner: self
-        )
+        trackingArea = NSTrackingArea(rect: bounds, options: [.mouseEnteredAndExited, .activeAlways], owner: self)
         addTrackingArea(trackingArea!)
     }
 
@@ -106,15 +90,14 @@ final class ClipRowView: NSView {
 
     override func rightMouseUp(with event: NSEvent) {
         let menu = NSMenu()
-        menu.addItem(makeMenuItem(title: item.pinned ? "Unpin" : "Pin", action: #selector(handlePin)))
-        menu.addItem(makeMenuItem(title: "Delete", action: #selector(handleDelete)))
+        let pinTitle = item.pinned ? "Unpin" : "Pin"
+        let pinItem = NSMenuItem(title: pinTitle, action: #selector(handlePin), keyEquivalent: "")
+        pinItem.target = self
+        let deleteItem = NSMenuItem(title: "Delete", action: #selector(handleDelete), keyEquivalent: "")
+        deleteItem.target = self
+        menu.addItem(pinItem)
+        menu.addItem(deleteItem)
         NSMenu.popUpContextMenu(menu, with: event, for: self)
-    }
-
-    private func makeMenuItem(title: String, action: Selector) -> NSMenuItem {
-        let menuItem = NSMenuItem(title: title, action: action, keyEquivalent: "")
-        menuItem.target = self
-        return menuItem
     }
 
     @objc private func handlePin() { onPin?() }
@@ -123,8 +106,8 @@ final class ClipRowView: NSView {
     // MARK: - Drawing
 
     override func draw(_ dirtyRect: NSRect) {
-        let fill = isHighlighted ? Theme.rowHover : Theme.cardBackground
-        fill.setFill()
-        NSBezierPath(roundedRect: bounds, xRadius: Layout.rowCornerRadius, yRadius: Layout.rowCornerRadius).fill()
+        let bg = isHighlighted ? Theme.rowHover : Theme.cardBackground
+        bg.setFill()
+        NSBezierPath(roundedRect: bounds, xRadius: 10, yRadius: 10).fill()
     }
 }

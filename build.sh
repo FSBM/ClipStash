@@ -37,6 +37,7 @@ swiftc \
     -o "${MACOS}/${APP_NAME}" \
     -framework Cocoa \
     -framework Carbon \
+    -framework AVFoundation \
     -target arm64-apple-macosx13.0 \
     -O \
     "${SOURCES[@]}"
@@ -52,8 +53,24 @@ if [ -f "AppIcon.icns" ]; then
     echo "  ⟐  App icon added"
 fi
 
+# Copy intro image
+if [ -f "intro-bird.png" ]; then
+    cp intro-bird.png "${RESOURCES}/intro-bird.png"
+    echo "  ⟐  Intro image added"
+fi
+
+# Copy sound
+if [ -f "open-sound.mp3" ]; then
+    cp open-sound.mp3 "${RESOURCES}/open-sound.mp3"
+    echo "  ⟐  Sound added"
+fi
+
 # Make executable
 chmod +x "${MACOS}/${APP_NAME}"
+
+# Sign the app properly so macOS can track permissions consistently
+echo "  ⟐  Signing app bundle..."
+codesign -f -s - --deep "${APP_BUNDLE}" 2>/dev/null && echo "  ⟐  App signed (ad-hoc)" || echo "  ⟐  Signing skipped"
 
 echo ""
 echo "  ✓  Build complete!"
