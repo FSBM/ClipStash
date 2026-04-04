@@ -13,6 +13,12 @@ cp -r build/ClipStash.app /Applications/
 open /Applications/ClipStash.app
 ```
 
+
+## Screenshots:
+
+
+<img width="693" height="551" alt="Screenshot 2026-04-04 at 5 28 56 AM" src="https://github.com/user-attachments/assets/c79ac0d4-ee12-45ad-8c9c-667834eea5d9" />
+
 ## How It Works
 
 ### Architecture
